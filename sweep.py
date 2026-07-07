@@ -88,7 +88,11 @@ SWEEPS = [
     ("store_pipe_1", "lsu_pipe", {"Cva6NrStorePipeRegs": 1}),
     ("store_pipe_2", "lsu_pipe", {"Cva6NrStorePipeRegs": 2}),
     # LSU buffer sizing
-    ("lsu_buf_8_12", "lsu_buf", {"Cva6NrLoadBufEntries": 8, "Cva6MaxOutstandingStores": 12}),
+    (
+        "lsu_buf_8_12",
+        "lsu_buf",
+        {"Cva6NrLoadBufEntries": 8, "Cva6MaxOutstandingStores": 12},
+    ),
     # Compressed instructions
     # ("rvc_off", "rvc", {"Cva6RVC": 0}),
     # Bitmanip
@@ -127,7 +131,11 @@ SWEEPS = [
     ("dcache_assoc_4", "cache_assoc", {"Cva6DcacheSetAssoc": 4}),
     ("dcache_assoc_16", "cache_assoc", {"Cva6DcacheSetAssoc": 16}),
     # I$ and D$ at minimum valid size
-    ("min_l1_cache", "min_l1_cache", {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256}),
+    (
+        "min_l1_cache",
+        "min_l1_cache",
+        {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256},
+    ),
 ]
 
 
@@ -182,7 +190,9 @@ def load_done(csv_path: str) -> set[str]:
         return {row["name"] for row in csv.DictReader(f) if row.get("score")}
 
 
-def append_result(csv_path, name, family, overrides, score, mhz_score, log_dir, error=""):
+def append_result(
+    csv_path, name, family, overrides, score, mhz_score, log_dir, error=""
+):
     """Append one sweep result row to the CSV, writing the header if the file is new."""
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     exists = os.path.exists(csv_path)
@@ -325,7 +335,9 @@ def main():
         print("-" * 84)
         for name, family, overrides in SWEEPS:
             has_bit = "saved" if os.path.exists(saved_bitstream(name)) else "synth"
-            print(f"{name:<25}  {family:<14}  {has_bit:<10}  {overrides or '(baseline)'}")
+            print(
+                f"{name:<25}  {family:<14}  {has_bit:<10}  {overrides or '(baseline)'}"
+            )
         return
 
     done = set() if args.rerun else load_done(args.results)
@@ -352,7 +364,9 @@ def main():
             score, mhz_score, log_dir = run_one(
                 name, overrides, _fpga.COREMARK_GPT, do_synth, bstream
             )
-            append_result(args.results, name, family, overrides, score, mhz_score, log_dir)
+            append_result(
+                args.results, name, family, overrides, score, mhz_score, log_dir
+            )
         except Exception as e:
             append_result(args.results, name, family, overrides, None, None, "", str(e))
             _fpga.log("ERROR", f"{name}: {e}")

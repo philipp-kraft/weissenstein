@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Dash web app: benchmark score for each CVA6 microarchitectural sweep point, measured on the Genesys2 FPGA."""
+
 import time
 from pathlib import Path
 
@@ -322,9 +324,7 @@ app.layout = html.Div(
                                 "marginBottom": "8px",
                             },
                         ),
-                        dcc.Graph(
-                            id="graph-content", config={"displaylogo": False}
-                        ),
+                        dcc.Graph(id="graph-content", config={"displaylogo": False}),
                         html.P(
                             "Baseline highlighted in orange; points that errored "
                             "during the run are excluded from the chart.",
@@ -452,7 +452,9 @@ def update_graph(source, family, sort_by, _n):
     plotted = df[~df["error"]].assign(is_baseline=lambda d: d["name"] == "baseline")
     if sort_by != "default":
         plotted = plotted.sort_values(sort_by, ascending=(sort_by == "name"))
-    plotted = pd.concat([plotted[plotted["is_baseline"]], plotted[~plotted["is_baseline"]]])
+    plotted = pd.concat(
+        [plotted[plotted["is_baseline"]], plotted[~plotted["is_baseline"]]]
+    )
     skipped = df[df["error"]]["name"].tolist()
     note = (
         f"Skipped {len(skipped)} point(s) with error: {', '.join(skipped)}"

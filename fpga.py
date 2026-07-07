@@ -212,11 +212,16 @@ def start_gdb(host, openocd_port, elf):
     gdb_file = open(path, "w")
     return subprocess.Popen(
         [
-            "riscv64-unknown-elf-gdb", "-batch",
-            "-ex", f"target extended-remote {host}:{openocd_port}",
-            "-ex", "monitor reset halt",
-            "-ex", "load",
-            "-ex", "continue",
+            "riscv64-unknown-elf-gdb",
+            "-batch",
+            "-ex",
+            f"target extended-remote {host}:{openocd_port}",
+            "-ex",
+            "monitor reset halt",
+            "-ex",
+            "load",
+            "-ex",
+            "continue",
             elf,
         ],
         stdout=gdb_file,
@@ -258,7 +263,10 @@ def program(board, tcp_port, jtag_sn):
 
 def flash(board, tcp_port, jtag_sn, img):
     """Flash a GPT disk image to the board's onboard SPI flash via the Xilinx hardware server."""
-    log("INFO", f"Flashing {img} to {board} via {SSH_HOST}:{tcp_port} (this takes ~10 min)")
+    log(
+        "INFO",
+        f"Flashing {img} to {board} via {SSH_HOST}:{tcp_port} (this takes ~10 min)",
+    )
     subprocess.run(
         [
             "make",
@@ -323,7 +331,10 @@ def main():
 
     _open_log()
     if args.flash and not args.program:
-        log("WARN", "--flash without --program: bitstream will be lost after flashing; run with --program afterwards to restore it")
+        log(
+            "WARN",
+            "--flash without --program: bitstream will be lost after flashing; run with --program afterwards to restore it",
+        )
     board = None
     uart_proc = None
     openocd_proc = None
@@ -344,7 +355,7 @@ def main():
         if not args.program:
             openocd_proc = start_openocd(SSH_HOST, board)
             gdb_proc = start_gdb(SSH_HOST, openocd_port, args.binary)
-        
+
         watch_uart(uart_log, match=args.match)
 
     except Exception as e:
