@@ -25,7 +25,7 @@ sys.path.insert(0, _SCRIPT_DIR)
 import fpga as _fpga
 
 CHESHIRE_PKG = os.path.join(_REPO_ROOT, "hw", "cheshire_pkg.sv")
-RESULTS_CSV = os.path.join(_SCRIPT_DIR, "results", "sweep_results.csv")
+RESULTS_CSV = os.path.join(_SCRIPT_DIR, "results", "coremark.csv")
 BITSTREAM_DIR = os.path.join(_SCRIPT_DIR, "bitstreams")
 BITSTREAM_DEFAULT = os.path.join(
     _REPO_ROOT, "target", "xilinx", "out", f"cheshire.{_fpga.FPGA_CLASS}.bit"
@@ -55,79 +55,79 @@ DEFAULTS = {
     "Cva6DataTlbEntries": 16,
 }
 
-# Sweep table: (run_name, {param: override_value, ...})
+# Sweep table: (run_name, family, {param: override_value, ...})
 # Empty dict = baseline (all DEFAULTS).
 SWEEPS = [
     # Baseline
-    ("baseline", {}),
+    ("baseline", "baseline", {}),
     # RAS depth (default 2)
-    ("ras_4", {"Cva6RASDepth": 4}),
-    ("ras_8", {"Cva6RASDepth": 8}),
-    ("ras_16", {"Cva6RASDepth": 16}),
+    ("ras_4", "ras", {"Cva6RASDepth": 4}),
+    ("ras_8", "ras", {"Cva6RASDepth": 8}),
+    ("ras_16", "ras", {"Cva6RASDepth": 16}),
     # BTB entries (default 32)
-    ("btb_0", {"Cva6BTBEntries": 0}),
-    ("btb_8", {"Cva6BTBEntries": 8}),
-    ("btb_16", {"Cva6BTBEntries": 16}),
-    ("btb_64", {"Cva6BTBEntries": 64}),
-    ("btb_128", {"Cva6BTBEntries": 128}),
-    ("btb_256", {"Cva6BTBEntries": 256}),
+    ("btb_0", "btb", {"Cva6BTBEntries": 0}),
+    ("btb_8", "btb", {"Cva6BTBEntries": 8}),
+    ("btb_16", "btb", {"Cva6BTBEntries": 16}),
+    ("btb_64", "btb", {"Cva6BTBEntries": 64}),
+    ("btb_128", "btb", {"Cva6BTBEntries": 128}),
+    ("btb_256", "btb", {"Cva6BTBEntries": 256}),
     # BHT entries (default 128)
-    ("bht_32", {"Cva6BHTEntries": 32}),
-    ("bht_64", {"Cva6BHTEntries": 64}),
-    ("bht_256", {"Cva6BHTEntries": 256}),
-    ("bht_512", {"Cva6BHTEntries": 512}),
+    ("bht_32", "bht", {"Cva6BHTEntries": 32}),
+    ("bht_64", "bht", {"Cva6BHTEntries": 64}),
+    ("bht_256", "bht", {"Cva6BHTEntries": 256}),
+    ("bht_512", "bht", {"Cva6BHTEntries": 512}),
     # BHT history bits (default 3)
-    ("bht_hist_1", {"Cva6BHTHistory": 1}),
-    ("bht_hist_2", {"Cva6BHTHistory": 2}),
-    ("bht_hist_4", {"Cva6BHTHistory": 4}),
-    ("bht_hist_5", {"Cva6BHTHistory": 5}),
-    ("bht_hist_7", {"Cva6BHTHistory": 7}),
+    ("bht_hist_1", "bht_hist", {"Cva6BHTHistory": 1}),
+    ("bht_hist_2", "bht_hist", {"Cva6BHTHistory": 2}),
+    ("bht_hist_4", "bht_hist", {"Cva6BHTHistory": 4}),
+    ("bht_hist_5", "bht_hist", {"Cva6BHTHistory": 5}),
+    ("bht_hist_7", "bht_hist", {"Cva6BHTHistory": 7}),
     # LSU pipelining (default load=1, store=0)
-    ("lsu_pipe_0_0", {"Cva6NrLoadPipeRegs": 0, "Cva6NrStorePipeRegs": 0}),
-    ("lsu_pipe_2_1", {"Cva6NrLoadPipeRegs": 2, "Cva6NrStorePipeRegs": 1}),
-    ("store_pipe_1", {"Cva6NrStorePipeRegs": 1}),
-    ("store_pipe_2", {"Cva6NrStorePipeRegs": 2}),
+    ("lsu_pipe_0_0", "lsu_pipe", {"Cva6NrLoadPipeRegs": 0, "Cva6NrStorePipeRegs": 0}),
+    ("lsu_pipe_2_1", "lsu_pipe", {"Cva6NrLoadPipeRegs": 2, "Cva6NrStorePipeRegs": 1}),
+    ("store_pipe_1", "lsu_pipe", {"Cva6NrStorePipeRegs": 1}),
+    ("store_pipe_2", "lsu_pipe", {"Cva6NrStorePipeRegs": 2}),
     # LSU buffer sizing
-    ("lsu_buf_8_12", {"Cva6NrLoadBufEntries": 8, "Cva6MaxOutstandingStores": 12}),
+    ("lsu_buf_8_12", "lsu_buf", {"Cva6NrLoadBufEntries": 8, "Cva6MaxOutstandingStores": 12}),
     # Compressed instructions
-    # ("rvc_off", {"Cva6RVC": 0}),
+    # ("rvc_off", "rvc", {"Cva6RVC": 0}),
     # Bitmanip
-    ("rvb", {"Cva6RVB": 1}),
+    ("rvb", "rvb", {"Cva6RVB": 1}),
     # Scoreboard / reorder buffer depth (default 8)
-    ("sb_2", {"Cva6NrScoreboardEntries": 2}),
-    ("sb_4", {"Cva6NrScoreboardEntries": 4}),
-    ("sb_16", {"Cva6NrScoreboardEntries": 16}),
-    ("sb_32", {"Cva6NrScoreboardEntries": 32}),
+    ("sb_2", "sb", {"Cva6NrScoreboardEntries": 2}),
+    ("sb_4", "sb", {"Cva6NrScoreboardEntries": 4}),
+    ("sb_16", "sb", {"Cva6NrScoreboardEntries": 16}),
+    ("sb_32", "sb", {"Cva6NrScoreboardEntries": 32}),
     # D-cache size (default 32768)
-    ("dcache_256", {"Cva6DcacheByteSize": 256}),
-    ("dcache_512", {"Cva6DcacheByteSize": 512}),
-    ("dcache_1k", {"Cva6DcacheByteSize": 1024}),
-    ("dcache_2k", {"Cva6DcacheByteSize": 2048}),
-    ("dcache_4k", {"Cva6DcacheByteSize": 4096}),
-    ("dcache_8k", {"Cva6DcacheByteSize": 8192}),
-    ("dcache_16k", {"Cva6DcacheByteSize": 16384}),
+    ("dcache_256", "dcache", {"Cva6DcacheByteSize": 256}),
+    ("dcache_512", "dcache", {"Cva6DcacheByteSize": 512}),
+    ("dcache_1k", "dcache", {"Cva6DcacheByteSize": 1024}),
+    ("dcache_2k", "dcache", {"Cva6DcacheByteSize": 2048}),
+    ("dcache_4k", "dcache", {"Cva6DcacheByteSize": 4096}),
+    ("dcache_8k", "dcache", {"Cva6DcacheByteSize": 8192}),
+    ("dcache_16k", "dcache", {"Cva6DcacheByteSize": 16384}),
     # I-cache size (default 16384)
-    ("icache_128", {"Cva6IcacheByteSize": 128}),
-    ("icache_256", {"Cva6IcacheByteSize": 256}),
-    ("icache_512", {"Cva6IcacheByteSize": 512}),
-    ("icache_1k", {"Cva6IcacheByteSize": 1024}),
-    ("icache_2k", {"Cva6IcacheByteSize": 2048}),
-    ("icache_4k", {"Cva6IcacheByteSize": 4096}),
-    ("icache_8k", {"Cva6IcacheByteSize": 8192}),
-    ("icache_32k", {"Cva6IcacheByteSize": 32768}),
+    ("icache_128", "icache", {"Cva6IcacheByteSize": 128}),
+    ("icache_256", "icache", {"Cva6IcacheByteSize": 256}),
+    ("icache_512", "icache", {"Cva6IcacheByteSize": 512}),
+    ("icache_1k", "icache", {"Cva6IcacheByteSize": 1024}),
+    ("icache_2k", "icache", {"Cva6IcacheByteSize": 2048}),
+    ("icache_4k", "icache", {"Cva6IcacheByteSize": 4096}),
+    ("icache_8k", "icache", {"Cva6IcacheByteSize": 8192}),
+    ("icache_32k", "icache", {"Cva6IcacheByteSize": 32768}),
     # Cache line width in bits (default 128)
-    ("dcache_line_256", {"Cva6DcacheLineWidth": 256}),
-    ("icache_line_64", {"Cva6IcacheLineWidth": 64}),
-    ("icache_line_256", {"Cva6IcacheLineWidth": 256}),
+    ("dcache_line_256", "cache_line", {"Cva6DcacheLineWidth": 256}),
+    ("icache_line_64", "cache_line", {"Cva6IcacheLineWidth": 64}),
+    ("icache_line_256", "cache_line", {"Cva6IcacheLineWidth": 256}),
     # Cache set-associativity (default icache=4, dcache=8)
-    ("icache_assoc_1", {"Cva6IcacheSetAssoc": 1}),
-    ("icache_assoc_2", {"Cva6IcacheSetAssoc": 2}),
-    ("icache_assoc_8", {"Cva6IcacheSetAssoc": 8}),
-    ("dcache_assoc_2", {"Cva6DcacheSetAssoc": 2}),
-    ("dcache_assoc_4", {"Cva6DcacheSetAssoc": 4}),
-    ("dcache_assoc_16", {"Cva6DcacheSetAssoc": 16}),
+    ("icache_assoc_1", "cache_assoc", {"Cva6IcacheSetAssoc": 1}),
+    ("icache_assoc_2", "cache_assoc", {"Cva6IcacheSetAssoc": 2}),
+    ("icache_assoc_8", "cache_assoc", {"Cva6IcacheSetAssoc": 8}),
+    ("dcache_assoc_2", "cache_assoc", {"Cva6DcacheSetAssoc": 2}),
+    ("dcache_assoc_4", "cache_assoc", {"Cva6DcacheSetAssoc": 4}),
+    ("dcache_assoc_16", "cache_assoc", {"Cva6DcacheSetAssoc": 16}),
     # I$ and D$ at minimum valid size
-    ("min_l1_cache", {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256}),
+    ("min_l1_cache", "min_l1_cache", {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256}),
 ]
 
 
@@ -182,7 +182,7 @@ def load_done(csv_path: str) -> set[str]:
         return {row["name"] for row in csv.DictReader(f) if row.get("score")}
 
 
-def append_result(csv_path, name, overrides, score, mhz_score, log_dir, error=""):
+def append_result(csv_path, name, family, overrides, score, mhz_score, log_dir, error=""):
     """Append one sweep result row to the CSV, writing the header if the file is new."""
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     exists = os.path.exists(csv_path)
@@ -192,6 +192,7 @@ def append_result(csv_path, name, overrides, score, mhz_score, log_dir, error=""
             w.writerow(
                 [
                     "name",
+                    "family",
                     "score",
                     "score_mhz",
                     "log_dir",
@@ -203,6 +204,7 @@ def append_result(csv_path, name, overrides, score, mhz_score, log_dir, error=""
         w.writerow(
             [
                 name,
+                family,
                 "" if score is None else f"{score:.6f}",
                 "" if mhz_score is None else f"{mhz_score:.6f}",
                 log_dir,
@@ -319,17 +321,17 @@ def main():
     args = parser.parse_args()
 
     if args.dry_run:
-        print(f"{'Name':<25}  {'Bitstream':<10}  Overrides")
-        print("-" * 70)
-        for name, overrides in SWEEPS:
+        print(f"{'Name':<25}  {'Family':<14}  {'Bitstream':<10}  Overrides")
+        print("-" * 84)
+        for name, family, overrides in SWEEPS:
             has_bit = "saved" if os.path.exists(saved_bitstream(name)) else "synth"
-            print(f"{name:<25}  {has_bit:<10}  {overrides or '(baseline)'}")
+            print(f"{name:<25}  {family:<14}  {has_bit:<10}  {overrides or '(baseline)'}")
         return
 
     done = set() if args.rerun else load_done(args.results)
     started = args.from_name is None
 
-    for name, overrides in SWEEPS:
+    for name, family, overrides in SWEEPS:
         if not started:
             if name == args.from_name:
                 started = True
@@ -350,9 +352,9 @@ def main():
             score, mhz_score, log_dir = run_one(
                 name, overrides, _fpga.COREMARK_GPT, do_synth, bstream
             )
-            append_result(args.results, name, overrides, score, mhz_score, log_dir)
+            append_result(args.results, name, family, overrides, score, mhz_score, log_dir)
         except Exception as e:
-            append_result(args.results, name, overrides, None, None, "", str(e))
+            append_result(args.results, name, family, overrides, None, None, "", str(e))
             _fpga.log("ERROR", f"{name}: {e}")
 
 

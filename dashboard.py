@@ -33,6 +33,10 @@ CARD = {
 def load(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     df["error"] = df["error"].astype(str).str.lower() == "true"
+    if "family" not in df.columns:
+        df["family"] = ""
+    else:
+        df["family"] = df["family"].fillna("")
     return df
 
 
@@ -195,6 +199,64 @@ app.layout = html.Div(
                                 html.Div(
                                     children=[
                                         html.Label(
+                                            "Sweep family",
+                                            style={
+                                                "display": "block",
+                                                "color": SECONDARY_INK,
+                                                "fontSize": "12px",
+                                                "fontWeight": 600,
+                                                "marginBottom": "4px",
+                                            },
+                                        ),
+                                        dcc.Dropdown(
+                                            ["All"],
+                                            "All",
+                                            id="family-dropdown",
+                                            clearable=False,
+                                            style={
+                                                "width": "200px",
+                                                "fontFamily": FONT,
+                                            },
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    children=[
+                                        html.Label(
+                                            "Sort by",
+                                            style={
+                                                "display": "block",
+                                                "color": SECONDARY_INK,
+                                                "fontSize": "12px",
+                                                "fontWeight": 600,
+                                                "marginBottom": "4px",
+                                            },
+                                        ),
+                                        dcc.Dropdown(
+                                            [
+                                                {
+                                                    "label": "Default",
+                                                    "value": "default",
+                                                },
+                                                {"label": "Name", "value": "name"},
+                                                {
+                                                    "label": "Score",
+                                                    "value": "score_mhz",
+                                                },
+                                            ],
+                                            "default",
+                                            id="sort-dropdown",
+                                            clearable=False,
+                                            style={
+                                                "width": "160px",
+                                                "fontFamily": FONT,
+                                            },
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    children=[
+                                        html.Label(
                                             "Auto-refresh",
                                             style={
                                                 "display": "block",
@@ -341,6 +403,21 @@ def refresh_sources(_n, current):
 
 
 @callback(
+    Output("family-dropdown", "options"),
+    Output("family-dropdown", "value"),
+    Input("source-dropdown", "value"),
+    State("family-dropdown", "value"),
+)
+def refresh_families(source, current):
+    if source is None:
+        return ["All"], "All"
+    families = sorted(load(RESULTS_DIR / source)["family"].unique())
+    options = ["All"] + [f for f in families if f != "baseline"]
+    value = current if current in options else "All"
+    return options, value
+
+
+@callback(
     Output("refresh", "interval"),
     Output("refresh", "disabled"),
     Input("refresh-interval-dropdown", "value"),
@@ -361,14 +438,21 @@ def set_refresh_interval(seconds):
     Output("stat-baseline", "children"),
     Output("table-title", "children"),
     Input("source-dropdown", "value"),
+    Input("family-dropdown", "value"),
+    Input("sort-dropdown", "value"),
     Input("refresh", "n_intervals"),
 )
-def update_graph(source, _n):
+def update_graph(source, family, sort_by, _n):
     if source is None:
         return px.bar(), [], [], "", [], "-", "-", "-", "-", "Sweep results"
 
     df = load(RESULTS_DIR / source)
+    if family and family != "All":
+        df = df[(df["family"] == family) | (df["name"] == "baseline")]
     plotted = df[~df["error"]].assign(is_baseline=lambda d: d["name"] == "baseline")
+    if sort_by != "default":
+        plotted = plotted.sort_values(sort_by, ascending=(sort_by == "name"))
+    plotted = pd.concat([plotted[plotted["is_baseline"]], plotted[~plotted["is_baseline"]]])
     skipped = df[df["error"]]["name"].tolist()
     note = (
         f"Skipped {len(skipped)} point(s) with error: {', '.join(skipped)}"
