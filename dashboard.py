@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dash web app: benchmark score for each CVA6 microarchitectural sweep point, measured on the Genesys2 FPGA."""
+"""Dash web app: benchmark score for each Cheshire microarchitectural sweep point."""
 
 import time
 from pathlib import Path
@@ -147,8 +147,7 @@ app.layout = html.Div(
                     },
                 ),
                 html.P(
-                    "Benchmark score for each CVA6 microarchitectural sweep point, "
-                    "measured on the Genesys2 FPGA.",
+                    "Benchmark score for each Cheshire microarchitectural sweep point.",
                     style={
                         "color": SECONDARY_INK,
                         "fontSize": "14px",
@@ -532,4 +531,4 @@ def update_graph(source, family, sort_by, _n):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8050, debug=True)
+    app.run(host="127.0.0.1", port=8050, debug=False)
