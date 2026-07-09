@@ -53,6 +53,18 @@ DEFAULTS = {
     "Cva6DcacheLineWidth": 128,
     "Cva6InstrTlbEntries": 16,
     "Cva6DataTlbEntries": 16,
+    # Core-side AXI outstanding transactions
+    "CoreMaxTxns": 8,
+    "CoreMaxTxnsPerId": 4,
+    # Crossbar-side AXI outstanding transactions
+    "AxiMaxMstTrans": 24,
+    "AxiMaxSlvTrans": 24,
+    # LLC (size = LlcSetAssoc * LlcNumLines * LlcNumBlocks * AxiDataWidth/8; default 128 KiB)
+    "LlcSetAssoc": 8,
+    "LlcNumLines": 256,
+    "LlcNumBlocks": 8,
+    "LlcMaxReadTxns": 16,
+    "LlcMaxWriteTxns": 16,
 }
 
 # Sweep table: (run_name, family, {param: override_value, ...})
@@ -68,12 +80,17 @@ SWEEPS = [
     ("btb_0", "btb", {"Cva6BTBEntries": 0}),
     ("btb_8", "btb", {"Cva6BTBEntries": 8}),
     ("btb_16", "btb", {"Cva6BTBEntries": 16}),
+    ("btb_32", "btb", {"Cva6BTBEntries": 32}),
     ("btb_64", "btb", {"Cva6BTBEntries": 64}),
     ("btb_128", "btb", {"Cva6BTBEntries": 128}),
     ("btb_256", "btb", {"Cva6BTBEntries": 256}),
     # BHT entries (default 128)
+    ("bht_2", "bht", {"Cva6BHTEntries": 2}),
+    ("bht_8", "bht", {"Cva6BHTEntries": 8}),
+    ("bht_16", "bht", {"Cva6BHTEntries": 16}),
     ("bht_32", "bht", {"Cva6BHTEntries": 32}),
     ("bht_64", "bht", {"Cva6BHTEntries": 64}),
+    ("bht_128", "bht", {"Cva6BHTEntries": 128}),
     ("bht_256", "bht", {"Cva6BHTEntries": 256}),
     ("bht_512", "bht", {"Cva6BHTEntries": 512}),
     # BHT history bits (default 3)
@@ -130,11 +147,83 @@ SWEEPS = [
     ("dcache_assoc_2", "cache_assoc", {"Cva6DcacheSetAssoc": 2}),
     ("dcache_assoc_4", "cache_assoc", {"Cva6DcacheSetAssoc": 4}),
     ("dcache_assoc_16", "cache_assoc", {"Cva6DcacheSetAssoc": 16}),
-    # I$ and D$ at minimum valid size
+    # I-cache and D-cache at minimum valid size
     (
         "min_l1_cache",
         "min_l1_cache",
         {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256},
+    ),
+    # LLC size (default 256 lines -> 128 KiB; SetAssoc=8, NumBlocks=8 fixed)
+    ("llc_size_32k", "llc_size", {"LlcNumLines": 64}),
+    ("llc_size_64k", "llc_size", {"LlcNumLines": 128}),
+    ("llc_size_128k", "llc_size", {"LlcNumLines": 256}),
+    ("llc_size_256k", "llc_size", {"LlcNumLines": 512}),
+    ("llc_size_512k", "llc_size", {"LlcNumLines": 1024}),
+    # LLC set-associativity (default 8)
+    ("llc_assoc_2", "llc_assoc", {"LlcSetAssoc": 2}),
+    ("llc_assoc_4", "llc_assoc", {"LlcSetAssoc": 4}),
+    ("llc_assoc_16", "llc_assoc", {"LlcSetAssoc": 16}),
+    # LLC outstanding read/write transactions (default 16/16)
+    (
+        "llc_txns_4",
+        "llc_txns",
+        {"LlcMaxReadTxns": 4, "LlcMaxWriteTxns": 4},
+    ),
+    (
+        "llc_txns_8",
+        "llc_txns",
+        {"LlcMaxReadTxns": 8, "LlcMaxWriteTxns": 8},
+    ),
+    (
+        "llc_txns_24",
+        "llc_txns",
+        {"LlcMaxReadTxns": 24, "LlcMaxWriteTxns": 24},
+    ),
+    (
+        "llc_txns_32",
+        "llc_txns",
+        {"LlcMaxReadTxns": 32, "LlcMaxWriteTxns": 32},
+    ),
+    # Core/crossbar AXI outstanding transactions (default core=8/4, xbar=24/24)
+    (
+        "axi_txns_small",
+        "axi_txns",
+        {
+            "CoreMaxTxns": 2,
+            "CoreMaxTxnsPerId": 1,
+            "AxiMaxMstTrans": 8,
+            "AxiMaxSlvTrans": 8,
+        },
+    ),
+    (
+        "axi_txns_med_small",
+        "axi_txns",
+        {
+            "CoreMaxTxns": 4,
+            "CoreMaxTxnsPerId": 2,
+            "AxiMaxMstTrans": 16,
+            "AxiMaxSlvTrans": 16,
+        },
+    ),
+    (
+        "axi_txns_med_large",
+        "axi_txns",
+        {
+            "CoreMaxTxns": 12,
+            "CoreMaxTxnsPerId": 6,
+            "AxiMaxMstTrans": 32,
+            "AxiMaxSlvTrans": 32,
+        },
+    ),
+    (
+        "axi_txns_large",
+        "axi_txns",
+        {
+            "CoreMaxTxns": 16,
+            "CoreMaxTxnsPerId": 8,
+            "AxiMaxMstTrans": 48,
+            "AxiMaxSlvTrans": 48,
+        },
     ),
 ]
 
@@ -194,7 +283,9 @@ def append_result(
     csv_path, name, family, overrides, score, mhz_score, log_dir, error=""
 ):
     """Append one sweep result row to the CSV, writing the header if the file is new."""
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    csv_dir = os.path.dirname(csv_path)
+    if csv_dir:
+        os.makedirs(csv_dir, exist_ok=True)
     exists = os.path.exists(csv_path)
     with open(csv_path, "a", newline="") as f:
         w = csv.writer(f)

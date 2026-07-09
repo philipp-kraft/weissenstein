@@ -34,7 +34,7 @@ CARD = {
 
 def load(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
-    df["error"] = df["error"].astype(str).str.lower() == "true"
+    df["error"] = df["error"].astype(str).str.lower() != "false"
     if "family" not in df.columns:
         df["family"] = ""
     else:
