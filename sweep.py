@@ -85,7 +85,6 @@ SWEEPS = [
     ("btb_128", "btb", {"Cva6BTBEntries": 128}),
     ("btb_256", "btb", {"Cva6BTBEntries": 256}),
     # BHT entries (default 128)
-    ("bht_2", "bht", {"Cva6BHTEntries": 2}),
     ("bht_8", "bht", {"Cva6BHTEntries": 8}),
     ("bht_16", "bht", {"Cva6BHTEntries": 16}),
     ("bht_32", "bht", {"Cva6BHTEntries": 32}),
@@ -154,13 +153,11 @@ SWEEPS = [
         {"Cva6IcacheByteSize": 128, "Cva6DcacheByteSize": 256},
     ),
     # LLC size (default 256 lines -> 128 KiB; SetAssoc=8, NumBlocks=8 fixed)
-    ("llc_size_32k", "llc_size", {"LlcNumLines": 64}),
     ("llc_size_64k", "llc_size", {"LlcNumLines": 128}),
     ("llc_size_128k", "llc_size", {"LlcNumLines": 256}),
     ("llc_size_256k", "llc_size", {"LlcNumLines": 512}),
     ("llc_size_512k", "llc_size", {"LlcNumLines": 1024}),
     # LLC set-associativity (default 8)
-    ("llc_assoc_2", "llc_assoc", {"LlcSetAssoc": 2}),
     ("llc_assoc_4", "llc_assoc", {"LlcSetAssoc": 4}),
     ("llc_assoc_16", "llc_assoc", {"LlcSetAssoc": 16}),
     # LLC outstanding read/write transactions (default 16/16)
@@ -173,11 +170,6 @@ SWEEPS = [
         "llc_txns_8",
         "llc_txns",
         {"LlcMaxReadTxns": 8, "LlcMaxWriteTxns": 8},
-    ),
-    (
-        "llc_txns_24",
-        "llc_txns",
-        {"LlcMaxReadTxns": 24, "LlcMaxWriteTxns": 24},
     ),
     (
         "llc_txns_32",
