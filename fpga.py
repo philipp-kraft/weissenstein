@@ -243,20 +243,31 @@ def synth():
     log("OK", "Synthesis complete")
 
 
+def _run_xilinx_make(args, attempts=3):
+    """Run a make target that drives Vivado over JTAG, killing cs_server and retrying on failure."""
+    for attempt in range(1, attempts + 1):
+        try:
+            subprocess.run(
+                args, check=True, cwd=_REPO_ROOT, stdout=_logfile, stderr=_logfile
+            )
+            return
+        except subprocess.CalledProcessError:
+            if attempt == attempts:
+                raise
+            log("WARN", f"Attempt {attempt}/{attempts} failed — killing cs_server and retrying")
+            subprocess.run(["pkill", "-f", "cs_server"], check=False)
+
+
 def program(board, tcp_port, jtag_sn):
     """Program the FPGA bitstream via the Xilinx hardware server using make."""
     log("INFO", f"Programming {board} via {SSH_HOST}:{tcp_port}")
-    subprocess.run(
+    _run_xilinx_make(
         [
             "make",
             f"chs-xilinx-program-{FPGA_CLASS}",
             f"CHS_XILINX_HWS_URL={SSH_HOST}:{tcp_port}",
             f"CHS_XILINX_HWS_PATH_{FPGA_CLASS}={{xilinx_tcf/*/{jtag_sn}*}}",
-        ],
-        check=True,
-        cwd=_REPO_ROOT,
-        stdout=_logfile,
-        stderr=_logfile,
+        ]
     )
     log("OK", f"Programming complete")
 
@@ -267,18 +278,14 @@ def flash(board, tcp_port, jtag_sn, img):
         "INFO",
         f"Flashing {img} to {board} via {SSH_HOST}:{tcp_port} (this takes ~10 min)",
     )
-    subprocess.run(
+    _run_xilinx_make(
         [
             "make",
             f"chs-xilinx-flash-{FPGA_CLASS}",
             f"CHS_XILINX_FLASH_IMG={os.path.abspath(img)}",
             f"CHS_XILINX_HWS_URL={SSH_HOST}:{tcp_port}",
             f"CHS_XILINX_HWS_PATH_{FPGA_CLASS}={{xilinx_tcf/*/{jtag_sn}*}}",
-        ],
-        check=True,
-        cwd=_REPO_ROOT,
-        stdout=_logfile,
-        stderr=_logfile,
+        ]
     )
     log("OK", "Flashing complete — reprogram the bitstream before running")
 
