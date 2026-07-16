@@ -451,7 +451,9 @@ def main():
                 args.results, name, family, overrides, score, mhz_score, log_dir
             )
         except Exception as e:
-            append_result(args.results, name, family, overrides, None, None, "", str(e))
+            append_result(
+                args.results, name, family, overrides, None, None, _fpga._run_dir, str(e)
+            )
             _fpga.log("ERROR", f"{name}: {e}")
 
 

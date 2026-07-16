@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 from dash import Dash, dash_table, dcc, html, callback, Output, Input, State
-import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -19,10 +19,11 @@ PAGE = "#f5f5f4"
 GRIDLINE = "#e6e5e1"
 BORDER = "#e2e1dc"
 BLUE = "#2a78d6"
-ORANGE = "#eb6834"
 RED = "#d03b3b"
 GREEN = "#0ca30c"
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
+
+SOURCE_COLORS = [BLUE, "#0ca3a3", "#8b5cf6", "#eb6834", "#c026d3", "#65a30d", "#d97706", "#0891b2"]
 
 CARD = {
     "backgroundColor": SURFACE,
@@ -40,6 +41,17 @@ def load(csv_path: str) -> pd.DataFrame:
     else:
         df["family"] = df["family"].fillna("")
     return df
+
+
+def load_combined(sources: list[str]) -> pd.DataFrame:
+    frames = []
+    for s in sources:
+        d = load(RESULTS_DIR / s)
+        d["source"] = s
+        frames.append(d)
+    if not frames:
+        return pd.DataFrame(columns=["source", "family", "error"] + BASE_COLUMNS)
+    return pd.concat(frames, ignore_index=True)
 
 
 def sources_by_mtime() -> list[str]:
@@ -176,7 +188,7 @@ app.layout = html.Div(
                                 html.Div(
                                     children=[
                                         html.Label(
-                                            "Source",
+                                            "Sources",
                                             style={
                                                 "display": "block",
                                                 "color": SECONDARY_INK,
@@ -187,11 +199,12 @@ app.layout = html.Div(
                                         ),
                                         dcc.Dropdown(
                                             sources,
-                                            sources[0],
+                                            sources[:1],
                                             id="source-dropdown",
+                                            multi=True,
                                             clearable=False,
                                             style={
-                                                "width": "320px",
+                                                "width": "420px",
                                                 "fontFamily": FONT,
                                             },
                                         ),
@@ -299,14 +312,13 @@ app.layout = html.Div(
                         stat_tile("stat-total", "Sweep points"),
                         stat_tile("stat-errored", "Errors"),
                         stat_tile("stat-best", "Best Score"),
-                        stat_tile("stat-baseline", "Baseline Score"),
                     ],
                 ),
                 html.Div(
                     style={**CARD, "marginBottom": "20px"},
                     children=[
                         html.Div(
-                            "Benchmark score by sweep point",
+                            "Benchmark score by configuration",
                             style={
                                 "color": INK,
                                 "fontSize": "15px",
@@ -324,18 +336,6 @@ app.layout = html.Div(
                             },
                         ),
                         dcc.Graph(id="graph-content", config={"displaylogo": False}),
-                        html.P(
-                            "Baseline highlighted in orange; points that errored "
-                            "during the run are excluded from the chart.",
-                            style={
-                                "color": MUTED_INK,
-                                "fontSize": "12px",
-                                "fontStyle": "italic",
-                                "margin": "12px 0 0",
-                                "borderTop": f"1px solid {GRIDLINE}",
-                                "paddingTop": "10px",
-                            },
-                        ),
                     ],
                 ),
                 html.Div(
@@ -397,7 +397,8 @@ app.layout = html.Div(
 )
 def refresh_sources(_n, current):
     found = sources_by_mtime()
-    value = current if current in found else (found[0] if found else None)
+    current = current or []
+    value = [s for s in current if s in found] or (found[:1] if found else [])
     return found, value
 
 
@@ -407,10 +408,10 @@ def refresh_sources(_n, current):
     Input("source-dropdown", "value"),
     State("family-dropdown", "value"),
 )
-def refresh_families(source, current):
-    if source is None:
+def refresh_families(sources, current):
+    if not sources:
         return ["All"], "All"
-    families = sorted(load(RESULTS_DIR / source)["family"].unique())
+    families = sorted(load_combined(sources)["family"].unique())
     options = ["All"] + [f for f in families if f != "baseline"]
     value = current if current in options else "All"
     return options, value
@@ -434,27 +435,39 @@ def set_refresh_interval(seconds):
     Output("stat-total", "children"),
     Output("stat-errored", "children"),
     Output("stat-best", "children"),
-    Output("stat-baseline", "children"),
     Output("table-title", "children"),
     Input("source-dropdown", "value"),
     Input("family-dropdown", "value"),
     Input("sort-dropdown", "value"),
     Input("refresh", "n_intervals"),
 )
-def update_graph(source, family, sort_by, _n):
-    if source is None:
-        return px.bar(), [], [], "", [], "-", "-", "-", "-", "Sweep results"
+def update_graph(sources, family, sort_by, _n):
+    if not sources:
+        return go.Figure(), [], [], "", [], "-", "-", "-", "Sweep results"
 
-    df = load(RESULTS_DIR / source)
+    df = load_combined(sources)
     if family and family != "All":
         df = df[(df["family"] == family) | (df["name"] == "baseline")]
     plotted = df[~df["error"]].assign(is_baseline=lambda d: d["name"] == "baseline")
-    if sort_by != "default":
-        plotted = plotted.sort_values(sort_by, ascending=(sort_by == "name"))
-    plotted = pd.concat(
-        [plotted[plotted["is_baseline"]], plotted[~plotted["is_baseline"]]]
-    )
-    skipped = df[df["error"]]["name"].tolist()
+
+    if sort_by == "name":
+        name_order = sorted(plotted["name"].unique())
+    elif sort_by == "score_mhz":
+        name_order = (
+            plotted.groupby("name")["score_mhz"]
+            .mean()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
+    else:
+        name_order = list(dict.fromkeys(plotted["name"]))
+    if "baseline" in name_order:
+        name_order.remove("baseline")
+        name_order.insert(0, "baseline")
+
+    skipped = [
+        f"{row['name']} ({row['source']})" for _, row in df[df["error"]].iterrows()
+    ]
     note = (
         f"Skipped {len(skipped)} point(s) with error: {', '.join(skipped)}"
         if skipped
@@ -462,30 +475,46 @@ def update_graph(source, family, sort_by, _n):
     )
 
     best_row = plotted.loc[plotted["score_mhz"].idxmax()]
-    baseline_rows = plotted[plotted["name"] == "baseline"]
-    baseline_val = (
-        f"{baseline_rows['score_mhz'].iloc[0]:.3f}" if not baseline_rows.empty else "-"
-    )
+    best_val = f"{best_row['score_mhz']:.3f}"
 
-    mtime = (RESULTS_DIR / source).stat().st_mtime
+    latest_mtime = max((RESULTS_DIR / s).stat().st_mtime for s in sources)
     meta = [
-        badge(f"Last updated: {format_ago(time.time() - mtime)}", dot=GREEN),
+        badge(f"Last updated: {format_ago(time.time() - latest_mtime)}", dot=GREEN),
     ]
 
-    fig = px.bar(
-        plotted,
-        x="name",
-        y="score_mhz",
-        color="is_baseline",
-        color_discrete_map={True: ORANGE, False: BLUE},
-        hover_data={"score": ":.3f", "timestamp": True, "is_baseline": False},
-        labels={"name": "Sweep point", "score_mhz": "Benchmark score"},
-    )
-    fig.for_each_trace(
-        lambda t: t.update(name="Baseline" if t.name == "True" else "Sweep point")
-    )
-    fig.update_traces(marker_line_width=0)
+    data_order = [n for n in name_order if n != "baseline"]
+    if "baseline" in name_order:
+        data_order.append("baseline")
+
+    max_score = plotted["score_mhz"].max()
+
+    fig = go.Figure()
+    for i, src in enumerate(sources):
+        d = plotted[plotted["source"] == src].set_index("name").reindex(data_order)
+        color = SOURCE_COLORS[i % len(SOURCE_COLORS)]
+        fig.add_bar(
+            name=src,
+            x=data_order,
+            y=d["score_mhz"],
+            text=[f"{v:.2f}" if pd.notna(v) else "" for v in d["score_mhz"]],
+            textposition="outside",
+            textfont=dict(size=11, color=INK),
+            cliponaxis=False,
+            marker=dict(
+                color=color,
+                line_width=0,
+                pattern=dict(shape=["/" if b else "" for b in d["is_baseline"].fillna(False)]),
+            ),
+            customdata=d[["score", "timestamp"]],
+            hovertemplate=(
+                f"<b>%{{x}}</b><br>{src}"
+                "<br>score_mhz: %{y:.3f}"
+                "<br>score: %{customdata[0]:.3f}"
+                "<br>timestamp: %{customdata[1]}<extra></extra>"
+            ),
+        )
     fig.update_layout(
+        barmode="group",
         title=None,
         font=dict(family=FONT, color=INK, size=13),
         paper_bgcolor=SURFACE,
@@ -500,22 +529,29 @@ def update_graph(source, family, sort_by, _n):
             x=1,
         ),
         xaxis=dict(
+            title="Configuration",
             tickangle=-45,
             showgrid=False,
             linecolor=GRIDLINE,
             color=INK,
+            categoryorder="array",
+            categoryarray=name_order,
         ),
         yaxis=dict(
+            title="Score (CoreMark/MHz)",
             showgrid=True,
             gridcolor=GRIDLINE,
             gridwidth=1,
             zeroline=False,
             color=INK,
+            range=[0, max_score * 1.15] if pd.notna(max_score) else None,
         ),
         bargap=0.25,
     )
 
-    columns = [{"name": c, "id": c} for c in BASE_COLUMNS]
+    columns = [{"name": "source", "id": "source"}] + [
+        {"name": c, "id": c} for c in BASE_COLUMNS
+    ]
     return (
         fig,
         columns,
@@ -524,9 +560,8 @@ def update_graph(source, family, sort_by, _n):
         meta,
         str(len(df)),
         str(len(skipped)),
-        f"{best_row['score_mhz']:.3f}",
-        baseline_val,
-        f"Sweep data — showing {len(df)} rows",
+        best_val,
+        f"Sweep data — showing {len(df)} rows across {len(sources)} source(s)",
     )
 
 
