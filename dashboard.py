@@ -498,6 +498,11 @@ def update_graph(sources, family, sort_by, _n):
 
     max_score = plotted["score_mhz"].max()
 
+    bargap = 0.25
+    n_sources = len(sources)
+    group_width = 1 - bargap
+    bar_width = group_width / n_sources
+
     fig = go.Figure()
     for i, src in enumerate(sources):
         d = plotted[plotted["source"] == src].set_index("name").reindex(data_order)
@@ -506,6 +511,8 @@ def update_graph(sources, family, sort_by, _n):
             name=src,
             x=data_order,
             y=d["score_mhz"],
+            width=bar_width,
+            offset=-group_width / 2 + i * bar_width,
             text=[f"{v:.2f}" if pd.notna(v) else "" for v in d["score_mhz"]],
             textposition="outside",
             textfont=dict(size=11, color=INK),
@@ -556,7 +563,7 @@ def update_graph(sources, family, sort_by, _n):
             color=INK,
             range=[0, max_score * 1.15] if pd.notna(max_score) else None,
         ),
-        bargap=0.25,
+        bargap=bargap,
     )
 
     columns = [{"name": "source", "id": "source"}] + [
