@@ -298,6 +298,30 @@ app.layout = html.Div(
                                         ),
                                     ],
                                 ),
+                                html.Div(
+                                    children=[
+                                        html.Label(
+                                            "Labels",
+                                            style={
+                                                "display": "block",
+                                                "color": SECONDARY_INK,
+                                                "fontSize": "12px",
+                                                "fontWeight": 600,
+                                                "marginBottom": "4px",
+                                            },
+                                        ),
+                                        dcc.Checklist(
+                                            [{"label": " Show numbers", "value": "show"}],
+                                            ["show"],
+                                            id="show-labels-checklist",
+                                            style={
+                                                "color": SECONDARY_INK,
+                                                "fontSize": "13px",
+                                                "marginTop": "6px",
+                                            },
+                                        ),
+                                    ],
+                                ),
                             ],
                         ),
                     ],
@@ -422,7 +446,7 @@ def refresh_families(sources, current):
     if not sources:
         return ["All"], "All"
     families = sorted(load_combined(sources)["family"].unique())
-    options = ["All"] + [f for f in families if f != "baseline"]
+    options = ["All", "Baseline"] + [f for f in families if f != "baseline"]
     value = current if current in options else "All"
     return options, value
 
@@ -449,14 +473,18 @@ def set_refresh_interval(seconds):
     Input("source-dropdown", "value"),
     Input("family-dropdown", "value"),
     Input("sort-dropdown", "value"),
+    Input("show-labels-checklist", "value"),
     Input("refresh", "n_intervals"),
 )
-def update_graph(sources, family, sort_by, _n):
+def update_graph(sources, family, sort_by, show_labels, _n):
+    show_labels = "show" in (show_labels or [])
     if not sources:
         return go.Figure(), [], [], "", [], "-", "-", "-", "Sweep results"
 
     df = load_combined(sources)
-    if family and family != "All":
+    if family == "Baseline":
+        df = df[df["name"] == "baseline"]
+    elif family and family != "All":
         df = df[(df["family"] == family) | (df["name"] == "baseline")]
     plotted = df[~df["error"]].assign(is_baseline=lambda d: d["name"] == "baseline")
 
@@ -513,9 +541,9 @@ def update_graph(sources, family, sort_by, _n):
             y=d["score_mhz"],
             width=bar_width,
             offset=-group_width / 2 + i * bar_width,
-            text=[f"{v:.2f}" if pd.notna(v) else "" for v in d["score_mhz"]],
+            text=[f"{v:.2f}" if pd.notna(v) and show_labels else "" for v in d["score_mhz"]],
             textposition="outside",
-            textfont=dict(size=11, color=INK),
+            textfont=dict(size=14, color=INK, family=FONT, weight="bold"),
             cliponaxis=False,
             marker=dict(
                 color=color,
