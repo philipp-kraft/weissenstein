@@ -335,7 +335,17 @@ app.layout = html.Div(
                                 "marginBottom": "8px",
                             },
                         ),
-                        dcc.Graph(id="graph-content", config={"displaylogo": False}),
+                        dcc.Graph(
+                            id="graph-content",
+                            config={
+                                "displaylogo": False,
+                                "toImageButtonOptions": {
+                                    "format": "png",
+                                    "filename": "cheshire_benchmark",
+                                    "scale": 10,
+                                },
+                            },
+                        ),
                     ],
                 ),
                 html.Div(
