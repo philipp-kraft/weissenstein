@@ -80,7 +80,6 @@ SWEEPS = [
     ("btb_0", "btb", {"Cva6BTBEntries": 0}),
     ("btb_8", "btb", {"Cva6BTBEntries": 8}),
     ("btb_16", "btb", {"Cva6BTBEntries": 16}),
-    ("btb_32", "btb", {"Cva6BTBEntries": 32}),
     ("btb_64", "btb", {"Cva6BTBEntries": 64}),
     ("btb_128", "btb", {"Cva6BTBEntries": 128}),
     ("btb_256", "btb", {"Cva6BTBEntries": 256}),
@@ -89,7 +88,6 @@ SWEEPS = [
     ("bht_16", "bht", {"Cva6BHTEntries": 16}),
     ("bht_32", "bht", {"Cva6BHTEntries": 32}),
     ("bht_64", "bht", {"Cva6BHTEntries": 64}),
-    ("bht_128", "bht", {"Cva6BHTEntries": 128}),
     ("bht_256", "bht", {"Cva6BHTEntries": 256}),
     ("bht_512", "bht", {"Cva6BHTEntries": 512}),
     # BHT history bits (default 3)

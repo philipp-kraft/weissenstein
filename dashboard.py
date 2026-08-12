@@ -40,6 +40,10 @@ def load(csv_path: str) -> pd.DataFrame:
         df["family"] = ""
     else:
         df["family"] = df["family"].fillna("")
+    if "config_label" not in df.columns:
+        df["config_label"] = df["name"]
+    else:
+        df["config_label"] = df["config_label"].fillna(df["name"])
     return df
 
 
@@ -524,6 +528,9 @@ def update_graph(sources, family, sort_by, show_labels, _n):
     if "baseline" in name_order:
         data_order.append("baseline")
 
+    label_map = dict(zip(plotted["name"], plotted["config_label"]))
+    tick_labels = [label_map.get(n, n) for n in name_order]
+
     max_score = plotted["score_mhz"].max()
 
     bargap = 0.25
@@ -550,9 +557,9 @@ def update_graph(sources, family, sort_by, show_labels, _n):
                 line_width=0,
                 pattern=dict(shape=["/" if b else "" for b in d["is_baseline"].fillna(False)]),
             ),
-            customdata=d[["score", "timestamp"]],
+            customdata=d[["score", "timestamp", "config_label"]],
             hovertemplate=(
-                f"<b>%{{x}}</b><br>{src}"
+                f"<b>%{{customdata[2]}}</b><br>{src}"
                 "<br>score_mhz: %{y:.3f}"
                 "<br>score: %{customdata[0]:.3f}"
                 "<br>timestamp: %{customdata[1]}<extra></extra>"
@@ -561,6 +568,7 @@ def update_graph(sources, family, sort_by, show_labels, _n):
     fig.update_layout(
         barmode="group",
         title=None,
+        showlegend=True,
         font=dict(family=FONT, color=INK, size=13),
         paper_bgcolor=SURFACE,
         plot_bgcolor=SURFACE,
@@ -581,6 +589,9 @@ def update_graph(sources, family, sort_by, show_labels, _n):
             color=INK,
             categoryorder="array",
             categoryarray=name_order,
+            tickmode="array",
+            tickvals=name_order,
+            ticktext=tick_labels,
         ),
         yaxis=dict(
             title="Score (CoreMark/MHz)",
